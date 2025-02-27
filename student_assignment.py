@@ -20,38 +20,30 @@ store_database = {
 
 def generate_hw01():
     db_path = "chroma.sqlite3"
-    client = chromadb.PersistentClient(path=db_path)
+    chroma_client = chromadb.PersistentClient(path=db_path)
 
-    collection = client.get_or_create_collection(
-        name="TRAVEL",
-        metadata={"hnsw:space": "cosine"}
+    # collection = client.get_or_create_collection(
+    #     name="TRAVEL",
+    #     metadata={"hnsw:space": "cosine"}
+    # )
+
+    # csv_file = os.path.join(os.getcwd(), "COA_OpenData.csv")
+    # if not os.path.exists(csv_file):
+    #     raise FileNotFoundError(f"找不到 CSV 檔案: {csv_file}")
+    
+    openai_ef = embedding_functions.OpenAIEmbeddingFunction(
+        api_key = gpt_emb_config['api_key'],
+        api_base = gpt_emb_config['api_base'],
+        api_type = gpt_emb_config['openai_type'],
+        api_version = gpt_emb_config['api_version'],
+        deployment_id = gpt_emb_config['deployment_name']
     )
 
-    csv_file = os.path.join(os.getcwd(), "COA_OpenData.csv")
-    if not os.path.exists(csv_file):
-        raise FileNotFoundError(f"找不到 CSV 檔案: {csv_file}")
-    
-    df = pd.read_csv(csv_file)
-
-    for index, row in df.iterrows():
-        metadata = {
-            "file_name": "COA_OpenData.csv",
-            "name": row.get("店家名稱", ""),
-            "type": row.get("店家類型", ""),
-            "address": row.get("店家地址", ""),
-            "tel": row.get("店家聯絡電話", ""),
-            "city": row.get("店家所在城市", ""),
-            "town": row.get("店家所在城鎮", ""),
-            "date": int(time.mktime(time.strptime(row["CreateDate"], "%Y-%m-%d"))) if "CreateDate" in row and pd.notna(row["CreateDate"]) else None
-        }
-
-        document_text = row.get("HostWords", "")
-
-        collection.add(
-            ids=[str(index)],
-            documents=[document_text],
-            metadatas=[metadata]
-        )
+    collection = chroma_client.get_or_create_collection(
+        name="TRAVEL",
+        metadata={"hnsw:space": "cosine"},
+        embedding_function=openai_ef
+    )
     
     return collection
     
@@ -121,7 +113,7 @@ def demo(question):
     return collection
 
 
-# print(generate_hw01().count())
+print(generate_hw01().count())
 # print(generate_hw02(question="我想要找有關茶餐點的店家",
 #                     city=["宜蘭縣", "新北市"],
 #                     store_type=["美食"],
